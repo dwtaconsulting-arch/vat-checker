@@ -77,6 +77,21 @@
     ];
   }
 
+  /**
+   * 대사할 서류의 합계를 못 얻었을 때: "PDF에 있는데 못 읽음"과 "PDF에 없음"을 구분해 특이사항으로 남긴다.
+   * 있는데 못 읽은 것은 서식 차이 때문이므로 사람이 그 쪽을 직접 보면 된다.
+   */
+  function notRead(G, r, formKey, title, base, baseLabel) {
+    const pages = r.foundForms[formKey];
+    if (pages) {
+      return result(G, `${title}: 있음(${pages.join("·")}쪽), 합계를 읽지 못함`, S.WARN, base || null, null,
+        `특이사항 — 서류는 PDF에 있으나 이 출력 양식의 합계 칸을 자동으로 읽지 못했습니다. ${pages.join("·")}쪽 합계를 ${baseLabel}와 직접 대조해 주세요.`);
+    }
+    if (!base) return result(G, `${title}: 해당 없음`, S.SKIP);
+    return result(G, `${title}: PDF에서 찾지 못함`, S.WARN, base, null,
+      `특이사항 — ${baseLabel}에 금액이 있는데 PDF에서 이 서류를 찾지 못했습니다. 첨부가 빠졌는지 확인해 주세요.`);
+  }
+
   // 3. 세금계산서·계산서 합계표
   function invoiceSummary(r) {
     const G = "3. 본표 ↔ 세금계산서·계산서 합계표";
@@ -84,10 +99,7 @@
     const res = [];
     const s = r.purchaseInvoiceTotal;
     if (!s) {
-      const empty = a(10) === 0 && a(12) === 0;
-      res.push(result(G, "매입처별 세금계산서합계표 없음", empty ? S.SKIP : S.WARN, a(10) + a(12), null,
-        "본표 (10)(12) 세금계산서 매입에 금액이 있음 — PDF에 매입처별 '세금계산서'합계표가 빠졌거나 서식을 인식하지 못함 " +
-          "(면세 매입용 '계산서'합계표와는 다른 서류)"));
+      res.push(notRead(G, r, "매입처별세금계산서합계표", "매입처별 세금계산서합계표", a(10) + a(12), "본표 (10)+(12)"));
     } else {
       res.push(
         eq(G, "매입 공급가액 합계 = 본표 (10)+(12)", a(10) + a(12), s.공급가액),
@@ -102,8 +114,8 @@
         eq(G, "매출 세액 합계 = 본표 (1)", t(1), sales.세액),
         result(G, `매출처 ${sales.매출처수}곳, ${sales.매수}매`, S.OK, null, null, "참고"),
       );
-    } else if (a(1) + a(5) !== 0) {
-      res.push(result(G, "매출처별 세금계산서합계표 없음", S.WARN, a(1) + a(5), null, "본표 (1)(5)에 금액이 있음 — PDF에 합계표가 빠졌는지 확인"));
+    } else if (a(1) + a(5) !== 0 || r.foundForms["매출처별세금계산서합계표"]) {
+      res.push(notRead(G, r, "매출처별세금계산서합계표", "매출처별 세금계산서합계표", a(1) + a(5), "본표 (1)+(5)"));
     }
     const bill = r.purchaseBillTotal;
     const billAmt = a(90) || t(90);
@@ -112,8 +124,8 @@
         eq(G, "계산서 매입금액 합계 = 본표 2쪽 (90)", billAmt, bill.매입금액),
         result(G, `계산서 매입처 ${bill.매입처수}곳, ${bill.매수}매`, S.OK, null, null, "참고"),
       );
-    } else if (billAmt) {
-      res.push(result(G, "매입처별 계산서합계표 없음", S.WARN, billAmt, null, "(90) 계산서 수취금액이 있음 — PDF에 합계표가 빠졌는지 확인"));
+    } else if (billAmt || r.foundForms["매입처별계산서합계표"]) {
+      res.push(notRead(G, r, "매입처별계산서합계표", "매입처별 계산서합계표", billAmt, "본표 2쪽 (90)"));
     }
     return res;
   }
@@ -123,26 +135,23 @@
     const G = "4. 본표 ↔ 신용카드매출전표등 수령명세서";
     const a = (k) => r.amount(k), t = (k) => r.tax(k);
     const total = r.cardSummary["합계"];
-    if (!total) {
-      const empty = a(44) === 0 && a(45) === 0;
-      return [result(G, "수령명세서 없음", empty ? S.SKIP : S.ERROR, a(44) + a(45), null)];
-    }
+    if (!total) return [notRead(G, r, "신용카드수령명세서", "신용카드매출전표등 수령명세서", a(44) + a(45), "본표 (44)+(45)")];
     const parts = ["현금영수증", "화물운전자복지카드", "사업용신용카드", "그밖의신용카드등"].map((k) => r.cardSummary[k]).filter(Boolean);
     const res = [
-      eq(G, "⑤ 합계 공급가액 = 본표 (44)+(45)", a(44) + a(45), total.supply),
-      eq(G, "⑤ 합계 세액 = 본표 (44)+(45)", t(44) + t(45), total.tax),
-      eq(G, "⑤ 합계 건수 = ⑥~⑨", sum(parts.map((p) => p.count)), total.count),
-      eq(G, "⑤ 합계 공급가액 = ⑥~⑨", sum(parts.map((p) => p.supply)), total.supply),
-      eq(G, "⑤ 합계 세액 = ⑥~⑨", sum(parts.map((p) => p.tax)), total.tax),
+      eq(G, "합계 공급가액 = 본표 (44)+(45)", a(44) + a(45), total.supply),
+      eq(G, "합계 세액 = 본표 (44)+(45)", t(44) + t(45), total.tax),
+      eq(G, "합계 건수 = 항목별 합", sum(parts.map((p) => p.count)), total.count),
+      eq(G, "합계 공급가액 = 항목별 합", sum(parts.map((p) => p.supply)), total.supply),
+      eq(G, "합계 세액 = 항목별 합", sum(parts.map((p) => p.tax)), total.tax),
     ];
     const others = r.cardSummary["그밖의신용카드등"];
     if (others && (others.count || r.cardRows.length)) {
       const rows = r.cardRows;
       const missing = missingSeqs(rows.map((x) => x.seq));
       res.push(
-        eq(G, `⑨ 건수 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.count)), others.count),
-        eq(G, `⑨ 공급가액 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.supply)), others.supply),
-        eq(G, `⑨ 세액 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.tax)), others.tax),
+        eq(G, `그 밖의 신용카드등 건수 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.count)), others.count),
+        eq(G, `그 밖의 신용카드등 공급가액 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.supply)), others.supply),
+        eq(G, `그 밖의 신용카드등 세액 = 명세 ${rows.length}행 합`, sum(rows.map((x) => x.tax)), others.tax),
         result(G, "명세 일련번호 연속(읽기 누락 없음)", missing.length ? S.ERROR : S.OK, null, null,
           missing.length ? `빠진 번호: ${missing.join(", ")}` : `1~${rows.length}`),
       );

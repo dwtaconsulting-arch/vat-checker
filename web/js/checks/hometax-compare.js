@@ -22,9 +22,20 @@
     return result(name, S.WARN, ht, ret, [why, note].filter(Boolean).join(" "));
   };
 
+  /** 신고 − 홈택스 차이가 합계표의 "전자세금계산서 외 발급분"과 정확히 같으면 설명된 차이로 본다 */
+  const cmpInvoice = (name, ht, ret, nonE, field, help) => {
+    const extra = nonE ? nonE[field] : 0;
+    if (ht !== ret && extra && ret - ht === extra) {
+      return result(name, S.OK, ht, ret,
+        `차이 ${fmt(extra)}원 = 합계표의 "전자세금계산서 외 발급분"(종이·전송기한 후 전송 등, ${nonE.매수}매)과 정확히 같음`, true);
+    }
+    return cmp(name, ht, ret, help);
+  };
+
   function compareHometax(r, h) {
     const res = [];
     const a = (k) => r.amount(k), t = (k) => r.tax(k);
+    const salesNonE = r.salesInvoiceTotal?.전자외, purchNonE = r.purchaseInvoiceTotal?.전자외;
 
     // 기본 사항 — 다른 자료를 넣은 경우를 먼저 걸러낸다
     if (h.bizNo && r.bizNo) {
@@ -53,12 +64,12 @@
 
     // 매출
     const es = h.get("sales", "전자세금계산서");
-    res.push(cmp("전자세금계산서 매출 공급가액 = 신고서 (1)+(5)", es.amount, a(1) + a(5), {
+    res.push(cmpInvoice("전자세금계산서 매출 공급가액 = 신고서 (1)+(5)", es.amount, a(1) + a(5), salesNonE, "공급가액", {
       more: "신고가 더 많음 — 종이 세금계산서·전송기한 후 전송분이 있는지 확인.",
       less: "신고가 더 적음 — 매출 세금계산서 누락 여부 확인 (예정신고분이면 (7) 확인).",
       note: periodNote,
     }));
-    res.push(cmp("전자세금계산서 매출 세액 = 신고서 (1)", es.tax, t(1), {
+    res.push(cmpInvoice("전자세금계산서 매출 세액 = 신고서 (1)", es.tax, t(1), salesNonE, "세액", {
       more: "신고가 더 많음 — 종이·지연전송분 확인.", less: "신고가 더 적음 — 매출 누락 확인.", note: periodNote,
     }));
     const card = h.get("sales", "신용카드"), cash = h.get("sales", "현금영수증"), pg = h.get("sales", "판매결제대행");
@@ -73,12 +84,12 @@
 
     // 매입
     const ep = h.get("purchases", "전자세금계산서");
-    res.push(cmp("전자세금계산서 매입 공급가액 = 신고서 (10)+(12)", ep.amount, a(10) + a(12), {
+    res.push(cmpInvoice("전자세금계산서 매입 공급가액 = 신고서 (10)+(12)", ep.amount, a(10) + a(12), purchNonE, "공급가액", {
       more: "신고가 더 많음 — 종이 세금계산서·지연수취분 확인 (지연수취 가산세 (66) 대상인지).",
       less: "신고가 더 적음 — 공제 누락 여부 확인. 불공제분은 (10)(12)에 넣고 (17)로 빼는 것이 원칙.",
       note: periodNote,
     }));
-    res.push(cmp("전자세금계산서 매입 세액 = 신고서 (10)+(12)", ep.tax, t(10) + t(12), {
+    res.push(cmpInvoice("전자세금계산서 매입 세액 = 신고서 (10)+(12)", ep.tax, t(10) + t(12), purchNonE, "세액", {
       more: "신고가 더 많음 — 종이·지연수취분 확인.", less: "신고가 더 적음 — 공제 누락 확인.", note: periodNote,
     }));
     const cardHelp = {
@@ -88,14 +99,14 @@
     };
     const cs = r.cardSummary;
     const pairs = [
-      ["사업용신용카드", "사업용 신용카드 매입", "⑧"],
-      ["현금영수증", "현금영수증 매입", "⑥"],
-      ["화물운전자복지카드", "화물운전자복지카드 매입", "⑦"],
+      ["사업용신용카드", "사업용 신용카드"],
+      ["현금영수증", "현금영수증"],
+      ["화물운전자복지카드", "화물운전자복지카드"],
     ];
-    for (const [key, label, no] of pairs) {
+    for (const [key, label] of pairs) {
       const hv = h.get("purchases", key), rv = cs[key] ?? { supply: 0, tax: 0 };
-      res.push(cmp(`${label} 공급가액 = 수령명세서 ${no}`, hv.amount, rv.supply, cardHelp));
-      res.push(cmp(`${label} 세액 = 수령명세서 ${no}`, hv.tax, rv.tax, cardHelp));
+      res.push(cmp(`${label} 매입 공급가액 = 수령명세서 ${label}`, hv.amount, rv.supply, cardHelp));
+      res.push(cmp(`${label} 매입 세액 = 수령명세서 ${label}`, hv.tax, rv.tax, cardHelp));
     }
     const ebp = h.get("purchases", "전자계산서");
     res.push(cmp("전자계산서 매입 = 신고서 (90) 계산서 수취금액", ebp.amount, a(90) || t(90), {
