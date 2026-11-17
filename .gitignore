@@ -1,0 +1,15 @@
+# 실제 신고서·개인정보 — 절대 올리지 않음
+샘플자료/
+샘플자료_마스킹/
+*마스킹용어*
+*_매핑표.csv
+*.pdf
+*.xlsx
+*.xls
+web/tests/private/
+
+# 개발 환경
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

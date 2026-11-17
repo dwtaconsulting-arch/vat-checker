@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>RUNNING</title>
+<script src="../js/vendor/pdf.min.js"></script>
+<script src="../js/vendor/pdf.worker.min.js"></script>
+<script src="../js/core/money.js"></script>
+<script src="../js/core/period.js"></script>
+<script src="../js/core/trace.js"></script>
+<script src="../js/params/data.js"></script>
+<script src="../js/core/params.js"></script>
+<script src="../js/io/pdf-text.js"></script>
+<script src="../js/io/return-pdf.js"></script>
+<script src="../js/io/hometax-summary.js"></script>
+<script src="../js/checks/return-consistency.js"></script>
+<script src="../js/checks/hometax-compare.js"></script>
+<script src="harness.js"></script>
+<script src="core.test.js"></script>
+<!-- 실제 신고서로 돌리는 회귀 테스트: private/ 는 저장소에 올리지 않음 (없으면 건너뜀) -->
+<script src="private/sample.test.js"></script>
+<script src="private/sample02.test.js"></script>
+</head>
+<body>
+<pre id="out">RUNNING</pre>
+<script>runTests();</script>
+</body>
+</html>

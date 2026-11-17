@@ -1,0 +1,10 @@
+[project]
+name = "vat-calculator"
+version = "0.1.0"
+description = "부가가치세 신고서 정밀 계산기 (사무소 내부 검토용)"
+requires-python = ">=3.11"
+dependencies = ["openpyxl"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

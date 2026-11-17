@@ -1,0 +1,12 @@
+# 부가가치세 세율
+# 값은 반드시 문자열("0.10") 또는 정수로 적는다 (소수 float 금지).
+
+[[standard_rate]]
+value = "0.10"
+effective_from = 1977-07-01
+basis = "부가가치세법 제30조 (일반세율 10%)"
+
+[[zero_rate]]
+value = 0
+effective_from = 1977-07-01
+basis = "부가가치세법 제21조~제25조 (영세율)"
