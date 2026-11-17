@@ -77,7 +77,9 @@
     res.push(cmp("신용카드·현금영수증·판매대행 매출(공급대가) = 신고서 (3) 금액+세액", cardTotal, a(3) + t(3), {
       more: "신고가 더 많음 — 카드 외 매출(간편결제 등)을 (3)에 넣었는지 확인.",
       less: "신고가 더 적음 — 세금계산서를 함께 발급한 카드매출은 (1)로 신고하므로 정상일 수 있음. 아니면 카드매출 누락 확인.",
-      note: "홈택스 카드매출은 부가세 포함 금액이라 (3) 금액+세액과 비교. " + periodNote,
+      note: `[내역] 홈택스 = 신용카드 ${fmt(card.amount + card.tax)} + 현금영수증 ${fmt(cash.amount)}+${fmt(cash.tax)}` +
+        ` + 판매(결제)대행 ${fmt(pg.amount + pg.tax)} / 신고서 = (3) 금액 ${fmt(a(3))} + 세액 ${fmt(t(3))}.` +
+        " 홈택스 카드매출은 부가세 포함 금액이라 (3) 금액+세액과 비교. " + periodNote,
     }));
     const ebs = h.get("sales", "전자계산서");
     res.push(cmp("전자계산서 매출 = 신고서 (89) 계산서 발급금액", ebs.amount, a(89) || t(89), { note: periodNote }));
