@@ -85,8 +85,9 @@
     const s = r.purchaseInvoiceTotal;
     if (!s) {
       const empty = a(10) === 0 && a(12) === 0;
-      res.push(result(G, "매입처별 합계표 없음", empty ? S.SKIP : S.ERROR, a(10) + a(12), null,
-        "본표 (10)(12)에 금액이 있으면 합계표가 있어야 함"));
+      res.push(result(G, "매입처별 세금계산서합계표 없음", empty ? S.SKIP : S.WARN, a(10) + a(12), null,
+        "본표 (10)(12) 세금계산서 매입에 금액이 있음 — PDF에 매입처별 '세금계산서'합계표가 빠졌거나 서식을 인식하지 못함 " +
+          "(면세 매입용 '계산서'합계표와는 다른 서류)"));
     } else {
       res.push(
         eq(G, "매입 공급가액 합계 = 본표 (10)+(12)", a(10) + a(12), s.공급가액),
@@ -102,7 +103,7 @@
         result(G, `매출처 ${sales.매출처수}곳, ${sales.매수}매`, S.OK, null, null, "참고"),
       );
     } else if (a(1) + a(5) !== 0) {
-      res.push(result(G, "매출처별 합계표 없음", S.WARN, a(1) + a(5), null, "본표 (1)(5)에 금액이 있음 — PDF에 합계표가 빠졌는지 확인"));
+      res.push(result(G, "매출처별 세금계산서합계표 없음", S.WARN, a(1) + a(5), null, "본표 (1)(5)에 금액이 있음 — PDF에 합계표가 빠졌는지 확인"));
     }
     const bill = r.purchaseBillTotal;
     const billAmt = a(90) || t(90);
